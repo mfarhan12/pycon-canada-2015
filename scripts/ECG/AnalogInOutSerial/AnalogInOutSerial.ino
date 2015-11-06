@@ -3,7 +3,7 @@ const int analogInPin = A1;  // Analog input pin that the potentiometer is attac
 
 
 int sensorValue = 0;        // value read from the pot
-put to the PWM (analog out)
+
 
 void setup() {
   // initialize serial communications at 9600 bps:
@@ -17,5 +17,5 @@ void loop() {
   // print the results to the serial monitor:
   Serial.println(sensorValue);
   // wait 2 milliseconds before the next loop
-  delay(2);
+  delay(5);
 }

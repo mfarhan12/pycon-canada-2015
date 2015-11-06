@@ -6,10 +6,10 @@ import numpy as np
 import pyqtgraph as pg
 
 BAUDE_RATE = 9600
-COM = 11
+COM = 2
 ARDUINO_MAX_INT = 2 ** 10
 ARDUINO_MAX_VOLTAGE = 3.3
-WINDOW_SIZE = 4
+WINDOW_SIZE = 30
 MAX_DATA_SIZE = 1024
 # declare the GUI
 app = QtGui.QApplication([])
@@ -19,55 +19,52 @@ win.setWindowTitle("Narrow Band Mode I/data Plot")
 
 # initialize plots
 raw_plot = win.addPlot(title="Raw ECG")
-raw_curve = raw_Plot.plot(pen = 'y')
+raw_curve = raw_plot.plot(pen = 'y')
 
-dc_removed_plot = win.addPlot(title = 'DC Offset Removed')
-dc_curve = normalized_plot.plot(pen = 'b')
 
-normalized_Plot = win.addPlot(title = 'Normalized ECG')
-normalized_curve = normalized_plot.plot(pen = 'r')
-win.addRow()
+win.nextRow()
 
-smooth_plot = win.addPlot(title = 'Smooth ECG')
+smooth_plot = win.addPlot(title = 'Normalized ECG')
 smooth_curve = smooth_plot.plot(pen = 'g')
-raw_data = []
+raw_data = np.zeros(1024)
 dc_data = []
 normalized_data = []
-smooth_data = []
+smooth_data = np.zeros(1024)
+win.nextRow()
+ser = serial.Serial(COM, BAUDE_RATE)
 def update():
 
-    global  raw_curve, normalized_curve, smooth_curve
+    global raw_data, smooth_data, dc_data, normalized_data,smooth_data
     # open serial port
-    ser = serial.Serial(COM, BAUDE_RATE)
     raw_capture = []
+    for x in range(WINDOW_SIZE):
+        r = ser.readline()
+        raw_capture.append(float(r))
 
-    # capture data
-
-    raw_capture = float(ser.readlines(WINDOW_SIZE))
+    
     raw_data = np.concatenate([raw_data, raw_capture])
     
-    ser.close()
-    
-    # remove dc offset
-    removed_dc_offset = raw_capture - (np.mean(raw_capture)
-    dc_data = np.concatenate([dc_data, remove_dc_offset])
-    
-    # normalize data
-    normalize = ARDUINO_MAX_VOLTAGE * (removed_dc_offset / ARDUINO_MAX_INT)
-    normalized_data =  np.concatenate([normalized_data, normalize])
+   
     
     # smooth out the data by dividing by the mean
-    smoothed = normalize / np.mean(normalize)
-    smooth_data = np.concatenate([smooth_data, normalized_data])
+    smoothed = raw_capture / np.mean(raw_capture)
+    smooth_data = np.concatenate([smooth_data, smoothed])
     # remove first bin to make room for new bin
+
     if len(raw_data) > MAX_DATA_SIZE:
-        raw_data.pop(0)
-        dc_data.pop(0)
-        normalized_data.pop(0)
-        smooth_data.pop(0)
+
+        raw_data = raw_data[WINDOW_SIZE:]
+
+        smooth_data = smooth_data[WINDOW_SIZE:]
     # plot data
     raw_curve.setData(raw_data)
+    smooth_curve.setData(smooth_data)
+    print max(smooth_data)  
+def savecounter():
+    ser.close()
 
+import atexit
+atexit.register(savecounter)
 timer = QtCore.QTimer()
 timer.timeout.connect(update)
 timer.start(0)
