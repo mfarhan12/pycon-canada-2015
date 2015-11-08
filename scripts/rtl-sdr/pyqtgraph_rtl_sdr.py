@@ -17,21 +17,6 @@ NUM_SAMPLES_PER_SCAN = NFFT*16
 NUM_BUFFERED_SWEEPS = 100
 
 
-
-class MainApplication(pg.GraphicsWindow):
-
-    def __init__(self, dut):
-        super(MainApplication, self).__init__()
-        self.dut = dut
-
-    def keyPressEvent(self, event):
-        if event.text() == ';':
-            cmd, ok = QtGui.QInputDialog.getText(win, 'Enter SCPI Command',
-                        'Enter SCPI Command:')
-            if ok:
-                if '?' not in cmd:
-                    dut.scpiset(cmd)
-
 win = pg.GraphicsWindow()
 win.resize(1000,600)
 win.setWindowTitle("RTL-SDR Example")
@@ -39,31 +24,38 @@ win.setWindowTitle("RTL-SDR Example")
 # initialize plot
 data_plot = win.addPlot(title="Voltage Vs. Time")
 data_plot.showGrid(True, True, alpha = 1)
+data_plot.addLegend()
 # initialize a curve for the plot 
-i_curve = data_plot.plot(pen='r')
-q_curve = data_plot.plot(pen='y')
+i_curve = data_plot.plot(pen='r', name = "In-Phase Signal")
+q_curve = data_plot.plot(pen='y', name = "Quadrature Signal")
+
 win.nextRow()
 # initialize plot
 fft_plot = win.addPlot(title="Power Vs. Frequency")
 fft_plot.showGrid(True, True, alpha = 1)
+fft_plot.addLegend()
 # initialize a curve for the plot 
-curve = fft_plot.plot(pen='g')
-
-
+curve = fft_plot.plot(pen='g', name = "Power Spectrum")
+max_curve = fft_plot.plot(pen='r', name = "Max Hold")
 sdr = RtlSdr()
 # some defaults
 sdr.rs = 2e6
 sdr.fc = 106.9e6
 sdr.gain = 30
-
+max_data = []
 def update():
-    global dut, curve
+    global dut, curve, max_data
     samples = sdr.read_samples(SAMPLE_SIZE)
     samples = samples * np.hanning(len(samples))
     pow = 20 * np.log10(np.abs(np.fft.fftshift(np.fft.fft(samples))))
     i_curve.setData(samples.real)
     q_curve.setData(samples.imag)
-    curve.setData(pow, pen = 'g')
+    if len(max_data) == 0:
+        max_data = pow
+    else:
+        max_data = np.maximum(max_data, pow)
+    curve.setData(pow)
+    max_curve.setData(max_data)
     data_plot.enableAutoRange('xy', False)
     fft_plot.enableAutoRange('xy', False)
 timer = QtCore.QTimer()
