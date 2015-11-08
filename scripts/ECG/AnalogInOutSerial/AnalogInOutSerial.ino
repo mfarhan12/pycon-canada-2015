@@ -1,5 +1,5 @@
 
-const int analogInPin = A1;  // Analog input pin that the potentiometer is attached to
+const int analogInPin = A4;  // Analog input pin that the potentiometer is attached to
 
 
 int sensorValue = 0;        // value read from the pot

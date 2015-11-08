@@ -22,27 +22,43 @@ win.setWindowTitle("Microphone Audio Data")
 # create a plot for the time domain data
 data_plot = win.addPlot(title="Audio Signal Vs Time")
 data_plot.setXRange(0 ,MAX_PLOT_SIZE)
-time_curve = data_plot.plot(pen='g')
-total_data = []
+data_plot.showGrid(True, True)
+
+time_curve = data_plot.plot(pen=(24,215,248))
 
 # create a plot for the frequency domain data
 win.nextRow()
 fft_plot = win.addPlot(title="Power Vs Frequency Domain") 
 fft_curve = fft_plot.plot(pen='y')
+max_curve = fft_plot.plot(pen='r')
 fft_plot.showGrid(True, True)
 total_data = []
+max_hold = []
+
 def update():
-    global stream, total_data
+    global stream, total_data, max_hold
+    
+    # read data
     raw_data = stream.read(CHUNK)
+    
+    # convert raw bytes into integers
     data_sample = np.fromstring(raw_data, dtype=np.int16)
     total_data = np.concatenate([total_data, data_sample ])
+    
+    # remove old data
     if len(total_data) > MAX_PLOT_SIZE:
         total_data = total_data[CHUNK:]
     time_curve.setData(total_data)
     
+    # calculate the FFT
     fft_data = data_sample * np.hanning(len(data_sample))
     power_spectrum = 20 * np.log10(np.abs(np.fft.rfft(fft_data))/len(fft_data))
+    if len(max_hold) == 0:
+        max_hold = power_spectrum
+    else:
+        max_hold = np.maximum(max_hold, power_spectrum)
     fft_curve.setData(power_spectrum)
+    max_curve.setData(max_hold)
     fft_plot.enableAutoRange('xy', False)
 timer = QtCore.QTimer()
 timer.timeout.connect(update)
